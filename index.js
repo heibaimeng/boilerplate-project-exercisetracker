@@ -42,8 +42,7 @@ app.get('/api/users', (req, res) => {
 });
 
 app.post('/api/users/:_id/exercises', async (req, res) => {
-  const userId = req.params._id
-  const user = await User.findById(userId)
+  const user = await User.findById(req.params._id)
   const params = {
     username: user.username,
     description: req.body.description,
@@ -57,6 +56,36 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
     duration: exercise.duration,
     description: exercise.description,
     date: exercise.date.toDateString()
+  })
+})
+
+app.get('/api/users/:_id/logs', async function(req,res) {
+  const user = await User.findById(req.params._id)
+  const condition = {
+    username: user.username
+  }
+  let from = req.query.from ? new Date(req.query.from) : null
+  if (from) condition.date = { $gt: from }
+
+  let to = req.query.to ? new Date(req.query.to) : null
+  if (to) condition.date = { ...condition.date, $lt: to }
+
+  const exercisesQuery = Exercise.find(condition)
+
+  let limit = req.query.limit ? +req.query.limit : null
+  if (limit) exercisesQuery.limit(limit)
+
+  const exercises = await exercisesQuery.exec()
+
+  res.json({
+    username: user.username,
+    count: exercises.length,
+    _id: user._id,
+    log: exercises.map(e => ({
+      description: e.description,
+      duration: e.duration,
+      date: e.date.toDateString(),
+    }))
   })
 })
 
